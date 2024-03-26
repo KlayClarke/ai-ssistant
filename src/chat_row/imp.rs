@@ -2,14 +2,12 @@ use std::cell::RefCell;
 
 use glib::Binding;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CheckButton, CompositeTemplate, Label};
+use gtk::{glib, CompositeTemplate, Label};
 
 // Object holding the state
 #[derive(Default, CompositeTemplate)]
 #[template(resource = "/org/gtk_rs/example/chat_row.xml")]
 pub struct ChatRow {
-    #[template_child]
-    pub incoming_icon: TemplateChild<CheckButton>,
     #[template_child]
     pub content_label: TemplateChild<Label>,
     // Vector holding the bindings to properties of `TaskObject`
