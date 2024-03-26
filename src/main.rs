@@ -3,8 +3,8 @@ mod chat_object;
 mod chat_row;
 
 use dotenv::dotenv;
-use gtk::gdk::ModifierType;
-use gtk::{accelerator_get_default_mod_mask, prelude::*, EventController, EventControllerScroll, EventControllerScrollFlags};
+
+use gtk::prelude::*;
 use gtk::{glib, gio, Application};
 use window::Window;
 
@@ -30,7 +30,7 @@ fn build_ui(app: &Application) {
     // Create a window and set the title
     let window = Window::new(app);
     window.set_default_size(600, 600);
-    
+
     // Present window
     window.present();
 }
