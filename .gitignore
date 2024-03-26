@@ -1,0 +1,20 @@
+.env
+
+# Rust-specific ignores
+target/
+Cargo.lock
+
+# Editor-specific ignores
+.vscode/
+.idea/
+
+# Operating system-specific ignores
+.DS_Store
+Thumbs.db
+
+# Other common ignores
+*.log
+*.bak
+*.swp
+*.swo
+*~

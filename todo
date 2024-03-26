@@ -1,0 +1,13 @@
+- make chats start from bottom of page and build up [DONE]
+- Try to get Spotify api working with it --> when you enter in entry, it returns info on artist you entered [DONE]
+- Migrate api to try to get claude working [DONE]
+- Make chat content fit within window width (if window width smaller, text shrings ... etc.) [DONE]
+- Post to github [INPROGRESS]
+- use TextView instead of Entry to ensure when text overflows entry, it make entry taller
+- Change style to look more like a chat app
+- All horizontal scroll via shift+scroll
+- Find way to only create tokio runtime once
+- Make it so when newer chat uploaded, scrollbar moves down to catch it 
+- Allow user to enter own api key / handle persistence
+- Change app name in window
+- Change app font size
