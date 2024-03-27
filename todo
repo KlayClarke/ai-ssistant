@@ -1,15 +1,17 @@
-- allow cmd+v paste / cmd+c copy / word select
+- try writing it out word by word / char by char to simulate claude / gpt writing?]
+    anthropic has a streaming option that I think will work
+    attach visible bool to each word or char, then we just switch them to true in succession? if char visible, display it? Is that possible?
 - something that lets user know claude is thinking
-- use TextView instead of Entry to ensure when text overflows entry, it make entry taller
-- Find way to only create tokio runtime once
-- Allow user to enter own api key / handle persistence
-- Probably make it possible to query both claude and chatgpt at same time. Then aggregate both answers into one big one using claude?
 - dark theme ?
 - Change style to look more like a chat app
 - make chat row not take up full width if text content doesn't need full width
 - when incoming chat arrives, scroll window down to accomodate it?
-- try writing it out word by word / char by char to simulate claude / gpt writing?
-    attach visible bool to each word or char, then we just switch them to true in succession? if char visible, display it? Is that possible?
+- allow cmd+v paste / cmd+c copy / word select
+- use TextView instead of Entry to ensure when text overflows entry, it make entry taller
+- Find way to only create tokio runtime once
+- Allow user to enter own api key / handle persistence
+- Probably make it possible to query both claude and chatgpt at same time. Then aggregate both answers into one big one using claude?
+- organize api code into dif mod
 
 - make chats start from bottom of page and build up [DONE]
 - Try to get Spotify api working with it --> when you enter in entry, it returns info on artist you entered [DONE]
