@@ -24,11 +24,13 @@ impl ObjectSubclass for ChatRow {
 
     fn class_init(klass: &mut Self::Class) {
         klass.bind_template();
+        klass.set_css_name("chat-row")
     }
 
     fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
         obj.init_template();
     }
+
 }
 
 // Trait shared by all GObjects

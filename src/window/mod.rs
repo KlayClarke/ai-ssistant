@@ -15,6 +15,7 @@ use async_channel::Receiver;
 use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 
+// Claude API types
 #[derive(Serialize, Deserialize, Debug)]
 struct Content {
     text: String,
@@ -210,6 +211,12 @@ impl Window {
                 .expect("The child has to be a `ChatRow`.");
 
             chat_row.bind(&chat_object);
+
+            if chat_object.incoming() {
+                chat_row.set_valign(gtk::Align::Start);
+            } else {
+                chat_row.set_halign(gtk::Align::End);
+            }
         });
 
         // Tell factory how to unbind `chatRow` from `chatObject`

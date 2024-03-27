@@ -3,5 +3,6 @@
   <gresource prefix="/org/gtk_rs/example/">
     <file compressed="true" preprocess="xml-stripblanks">window.xml</file>
     <file compressed="true" preprocess="xml-stripblanks">chat_row.xml</file>
+    <file compressed="true">../style.css</file>
   </gresource>
 </gresources>

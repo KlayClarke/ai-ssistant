@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <template class="MyGtkAppWindow" parent="GtkApplicationWindow">
-    <property name="title">My GTK App</property>
+    <property name="title">AI-ssistant</property>
     <child>
       <object class="GtkBox" id="vertical_box">
         <property name="orientation">vertical</property>
@@ -14,11 +14,9 @@
           <object class="GtkScrolledWindow" id="scrolled_window">
             <property name="hscrollbar-policy">never</property>
             <property name="min-content-width">360</property>
-            <property name="max-content-width">300</property>
             <property name="vexpand">true</property>
             <child>
               <object class="GtkListView" id="chat_view" >
-                <property name="valign">end</property>
                 <style>
                   <class name="separators"/>
                 </style>
@@ -28,7 +26,6 @@
         </child>
         <child>
           <object class="GtkEntry" id="entry">
-            <property name="placeholder-text"></property>
             <property name="secondary-icon-name">list-add-symbolic</property>
           </object>
         </child>
