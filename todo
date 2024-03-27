@@ -1,3 +1,4 @@
+- allow cmd+v paste / cmd+c copy / word select
 - use TextView instead of Entry to ensure when text overflows entry, it make entry taller
 - Find way to only create tokio runtime once
 - Allow user to enter own api key / handle persistence
