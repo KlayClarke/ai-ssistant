@@ -1,6 +1,8 @@
 mod window;
 mod chat_object;
 mod chat_row;
+mod api_types;
+mod api_client;
 
 use dotenv::dotenv;
 use gtk::gdk::Display;
