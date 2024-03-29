@@ -1,10 +1,5 @@
-use std::{env, io::ErrorKind};
-
 use async_channel::Sender;
-use futures::StreamExt;
 use reqwest::{Client, Error, Response};
-
-use crate::api_types::{APIResponse, Content, Usage};
 
 pub struct APIClient {
     client: Client,
@@ -19,17 +14,17 @@ impl APIClient {
         }
     }
 
-    pub async fn send_chat_message(&self, content: &str, sender: Sender<Result<APIResponse, Error>>) -> Result<Response, Error> {
+    pub async fn send_chat_message(&self, content: &str) -> Result<Response, Error> {
+        let api_key = self.api_key.clone();
         let url = "https://api.anthropic.com/v1/messages";
         let json_data = serde_json::json!({
             "model": "claude-3-opus-20240229",
             "max_tokens": 1024,
             "messages": [{"role": "user", "content": content}],
-            "stream": true
         });
         let response = self.client
                 .post(url)
-                .header("x-api-key", &self.api_key)
+                .header("x-api-key", api_key)
                 .header("anthropic-version", "2023-06-01")
                 .json(&json_data)
                 .send()

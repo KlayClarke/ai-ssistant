@@ -3,27 +3,28 @@ mod imp;
 use gtk::subclass::prelude::*;
 use glib::{Object, clone};
 use gtk::{gio, glib, ListItem, SignalListItemFactory, prelude::*, NoSelection, Application};
-use reqwest::{Client, Error, Response};
+use reqwest::{Error, Response};
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::runtime::Runtime;
 use async_channel::Receiver;
 
+use crate::api_types::APIResponse;
 use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
-
-glib::wrapper! {
-    pub struct Window(ObjectSubclass<imp::Window>)
-        @extends gtk::ApplicationWindow, gtk::Window, gtk::Widget,
-        @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
-                    gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
-}
 
 fn runtime() -> &'static Runtime {
     static RUNTIME: OnceLock<Runtime> = OnceLock::new();
     RUNTIME.get_or_init(|| {
         Runtime::new().expect("Setting up tokio runtime needs to succeed.")
     })
+}
+
+glib::wrapper! {
+    pub struct Window(ObjectSubclass<imp::Window>)
+        @extends gtk::ApplicationWindow, gtk::Window, gtk::Widget,
+        @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
+                    gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 impl Window {
@@ -70,7 +71,7 @@ impl Window {
 
     fn new_chat(&self) {
         // create client
-
+        let client = APIClient::new(std::env::var("API_KEY").expect("API_KEY var doesn't exist"));
         // Get content from entry and clear it
         let buffer = self.imp().entry.buffer();
         let content = buffer.text().to_string();
@@ -88,18 +89,31 @@ impl Window {
         
         // for async actions in gtk
         runtime().spawn(clone!(@strong sender => async move {
-            // sender.send(Ok(response_body)).await.expect("The channel needs to be open");
+            let response = client.send_chat_message(&content).await;
+            sender.send(response).await.expect("The channel needs to be open");
         }));
-    
         // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]
         glib::spawn_future_local(async move {
             while let Ok(response) = shared_receiver.recv().await {
                 if let Ok(response) = response {
+                    println!("{:#?}", response);
                     match response.status() {
                         reqwest::StatusCode::OK => {
                             match response.text().await {
                                 Ok(body) => {
                                     println!("{:#?}", body);
+                                    match serde_json::from_str::<APIResponse>(&body) {
+                                        Ok(api_response) => {
+                                            let text = &api_response.content[0].text;
+                                            let incoming_chat = ChatObject::new(true, text.to_string());
+                                            if let Ok(guard) = shared_self.lock() {
+                                                guard.chats().append(&incoming_chat);
+                                            } else {
+                                                println!("Failed to acquire lock on shared_self");
+                                            }
+                                        }
+                                        Err(_) => todo!(),
+                                    }
                                 }
                                 Err(e) => {
                                     println!("Bad request: {}", e);

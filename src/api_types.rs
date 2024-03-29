@@ -3,26 +3,26 @@ use serde::{Deserialize, Serialize};
 // Claude API types
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Content {
-    text: String,
+    pub text: String,
     #[serde(rename="type")]
-    type_: String,
+    pub type_: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Usage {
-    input_tokens: u32,
-    output_tokens: u32,
+    pub input_tokens: u32,
+    pub output_tokens: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct APIResponse {
-    id: String,
+    pub id: String,
     #[serde(rename="type")]
-    type_: String,
-    role: String,
-    content: Vec<Content>,
-    model: String,
-    stop_reason: String,
-    stop_sequence: Option<String>,
-    usage: Usage,
+    pub type_: String,
+    pub role: String,
+    pub content: Vec<Content>,
+    pub model: String,
+    pub stop_reason: String,
+    pub stop_sequence: Option<String>,
+    pub usage: Usage,
 }
