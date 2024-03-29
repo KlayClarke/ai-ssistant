@@ -112,7 +112,9 @@ impl Window {
                                                 println!("Failed to acquire lock on shared_self");
                                             }
                                         }
-                                        Err(_) => todo!(),
+                                        Err(e) => {
+                                            eprintln!("Failed to deserialize response: {}", e);
+                                        }
                                     }
                                 }
                                 Err(e) => {

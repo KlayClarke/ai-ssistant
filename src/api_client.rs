@@ -19,7 +19,7 @@ impl APIClient {
         let url = "https://api.anthropic.com/v1/messages";
         let json_data = serde_json::json!({
             "model": "claude-3-opus-20240229",
-            "max_tokens": 1024,
+            "max_tokens": 256,
             "messages": [{"role": "user", "content": content}],
         });
         let response = self.client
