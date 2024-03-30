@@ -9,7 +9,7 @@ use tokio::runtime::Runtime;
 use async_channel::Receiver;
 
 use crate::api_types::APIResponse;
-use crate::chat_object::ChatObject;
+use crate::chat_object::{ChatData, ChatObject};
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
 
@@ -34,6 +34,7 @@ impl Window {
     }
 
     fn chats(&self) -> gio::ListStore {
+        println!("{:#?}", self.imp().chats);
         self.imp()
             .chats
             .borrow()
@@ -41,12 +42,23 @@ impl Window {
             .expect("Could not get current chats.")
     }
 
+    fn chats_(&self) -> Vec<ChatData> {
+        println!("{:#?}", self.imp().chats_vec);
+        self.imp()
+            .chats_vec
+            .borrow()
+            .clone()
+            .expect("Could not get current chats as vec.")
+    }
+
     fn setup_chats(&self) {
         // Create new model
         let model = gio::ListStore::new::<ChatObject>();
+        let model_: Vec<ChatData> = vec![];
 
         // Get state and set model
         self.imp().chats.replace(Some(model));
+        self.imp().chats_vec.replace(Some(model_));
 
         // Wrap model with selection and pass it to the list view
         let selection_model = NoSelection::new(Some(self.chats()));
@@ -81,6 +93,16 @@ impl Window {
         // Add new chat to model
         let chat = ChatObject::new("user".to_string(), content.clone());
         self.chats().append(&chat);
+        
+        // add new chat to vec
+        let chat = ChatData {
+            role: "user".to_string(),
+            content: content.clone(),
+        };
+        self.chats_().push(chat);
+
+        // get full conversation object -> need to pass it to api call below
+        let conversations: Vec<ChatData> = self.chats_();
 
         // handle api call
         let (sender, receiver) = async_channel::bounded(1);
@@ -89,7 +111,7 @@ impl Window {
         
         // for async actions in gtk
         runtime().spawn(clone!(@strong sender => async move {
-            let response = client.send_chat_message(&content).await;
+            let response = client.send_chat_message(&conversations).await;
             sender.send(response).await.expect("The channel needs to be open");
         }));
         // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]

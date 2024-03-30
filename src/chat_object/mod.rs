@@ -2,6 +2,7 @@ mod imp;
 
 use glib::Object;
 use gtk::glib;
+use serde::{Deserialize, Serialize};
 
 glib::wrapper! {
     pub struct ChatObject(ObjectSubclass<imp::ChatObject>);
@@ -16,7 +17,7 @@ impl ChatObject {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct ChatData {
     pub role: String,
     pub content: String,
