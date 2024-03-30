@@ -11,7 +11,7 @@ use super::ChatData;
 #[derive(Properties, Default)]
 #[properties(wrapper_type = super::ChatObject)]
 pub struct ChatObject {
-    #[property(name = "incoming", get, set, type = bool, member = incoming)]
+    #[property(name = "role", get, set, type = String, member = role)]
     #[property(name = "content", get, set, type = String, member = content)]
     pub data: RefCell<ChatData>,
 }

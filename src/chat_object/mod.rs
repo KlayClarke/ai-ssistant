@@ -8,9 +8,9 @@ glib::wrapper! {
 }
 
 impl ChatObject {
-    pub fn new(incoming: bool, content: String) -> Self {
+    pub fn new(role: String, content: String) -> Self {
         Object::builder()
-            .property("incoming", incoming)
+            .property("role", role)
             .property("content", content)
             .build()
     }
@@ -18,6 +18,6 @@ impl ChatObject {
 
 #[derive(Default)]
 pub struct ChatData {
-    pub incoming: bool,
+    pub role: String,
     pub content: String,
 }

@@ -79,7 +79,7 @@ impl Window {
         buffer.set_text("");
         
         // Add new chat to model
-        let chat = ChatObject::new(false, content.clone());
+        let chat = ChatObject::new("user".to_string(), content.clone());
         self.chats().append(&chat);
 
         // handle api call
@@ -105,7 +105,7 @@ impl Window {
                                     match serde_json::from_str::<APIResponse>(&body) {
                                         Ok(api_response) => {
                                             let text = &api_response.content[0].text;
-                                            let incoming_chat = ChatObject::new(true, text.to_string());
+                                            let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string());
                                             if let Ok(guard) = shared_self.lock() {
                                                 guard.chats().append(&incoming_chat);
                                             } else {
@@ -170,7 +170,7 @@ impl Window {
 
             chat_row.bind(&chat_object);
 
-            if chat_object.incoming() {
+            if chat_object.role() == "assistant" {
                 chat_row.set_valign(gtk::Align::Start);
             } else {
                 chat_row.set_halign(gtk::Align::End);
