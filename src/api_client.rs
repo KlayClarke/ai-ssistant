@@ -1,5 +1,6 @@
-use async_channel::Sender;
 use reqwest::{Client, Error, Response};
+
+use crate::chat_object::ChatData;
 
 pub struct APIClient {
     client: Client,
@@ -14,13 +15,14 @@ impl APIClient {
         }
     }
 
-    pub async fn send_chat_message(&self, content: &str) -> Result<Response, Error> {
+    pub async fn send_chat_message(&self, conversation: &Vec<ChatData>) -> Result<Response, Error> {
+        println!("api_client line 19 conversation print: {:?}", conversation);
         let api_key = self.api_key.clone();
         let url = "https://api.anthropic.com/v1/messages";
         let json_data = serde_json::json!({
             "model": "claude-3-opus-20240229",
             "max_tokens": 256,
-            "messages": [{"role": "user", "content": content}],
+            "messages": conversation.clone(),
         });
         let response = self.client
                 .post(url)

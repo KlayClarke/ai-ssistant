@@ -9,7 +9,7 @@ use tokio::runtime::Runtime;
 use async_channel::Receiver;
 
 use crate::api_types::APIResponse;
-use crate::chat_object::ChatObject;
+use crate::chat_object::{ChatData, ChatObject};
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
 
@@ -44,9 +44,11 @@ impl Window {
     fn setup_chats(&self) {
         // Create new model
         let model = gio::ListStore::new::<ChatObject>();
+        let model_: Vec<ChatData> = vec![];
 
         // Get state and set model
         self.imp().chats.replace(Some(model));
+        self.imp().chats_vec.replace(Some(model_));
 
         // Wrap model with selection and pass it to the list view
         let selection_model = NoSelection::new(Some(self.chats()));
@@ -82,6 +84,22 @@ impl Window {
         let chat = ChatObject::new("user".to_string(), content.clone());
         self.chats().append(&chat);
 
+        // extract chat data from chats and save in vec
+        let mut result = Vec::new();
+        let n_items = self.chats().n_items();
+        for i in 0..n_items {
+            if let Some(item) = self.chats().item(i) {
+                let chat = item.downcast_ref::<ChatObject>().expect("Item is not a ChatObject");
+                let role = chat.role();
+                let content = chat.content();
+                let chat = ChatData {
+                    role,
+                    content
+                };
+                result.push(chat);
+            }
+        }
+
         // handle api call
         let (sender, receiver) = async_channel::bounded(1);
         let shared_self = Arc::new(Mutex::new(self.clone()));
@@ -89,7 +107,7 @@ impl Window {
         
         // for async actions in gtk
         runtime().spawn(clone!(@strong sender => async move {
-            let response = client.send_chat_message(&content).await;
+            let response = client.send_chat_message(&result).await;
             sender.send(response).await.expect("The channel needs to be open");
         }));
         // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]

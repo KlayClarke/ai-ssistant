@@ -6,6 +6,8 @@ use gtk::subclass::prelude::*;
 use gtk::{glib, Entry, CompositeTemplate};
 use gio::ListStore;
 
+use crate::chat_object::ChatData;
+
 // Object holding the state
 #[derive(CompositeTemplate, Default)]
 #[template(resource = "/org/gtk_rs/example/window.xml")]
@@ -15,6 +17,7 @@ pub struct Window {
     #[template_child]
     pub chat_view: TemplateChild<ListView>,
     pub chats: RefCell<Option<ListStore>>,
+    pub chats_vec: RefCell<Option<Vec<ChatData>>>
 }
 
 // The central trait for subclassing a GObject
