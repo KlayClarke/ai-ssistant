@@ -11,7 +11,7 @@ glib::wrapper! {
 }
 
 impl ChatObject {
-    pub fn new(role: String, content: String, image: Option<String>) -> Self {
+    pub fn new(role: String, content: String, image: String) -> Self {
         Object::builder()
             .property("role", role)
             .property("content", content)
@@ -19,12 +19,12 @@ impl ChatObject {
             .build()
     }
 
-    pub fn get_image_path(&self) -> Option<PathBuf> {
-        self.image().map(PathBuf::from)
-    }
-
     pub fn set_user_content(&mut self, content: String) {
         self.set_property("content", content);
+    }
+
+    pub fn set_user_image(&mut self, image: String) {
+        self.set_property("image", image);
     }
 }
 
@@ -32,5 +32,5 @@ impl ChatObject {
 pub struct ChatData {
     pub role: String,
     pub content: String,
-    pub image: Option<String>
+    pub image: String
 }
