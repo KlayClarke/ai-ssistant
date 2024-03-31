@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::path::PathBuf;
 
 use glib::Properties;
 use gtk::glib;
@@ -13,7 +14,7 @@ use super::ChatData;
 pub struct ChatObject {
     #[property(name = "role", get, set, type = String, member = role)]
     #[property(name = "content", get, set, type = String, member = content)]
-    #[property(name = "image", get, set, type = String, member = image)]
+    #[property(name = "image", get, set, type = PathBuf, member = image)]
     pub data: RefCell<ChatData>,
 }
 

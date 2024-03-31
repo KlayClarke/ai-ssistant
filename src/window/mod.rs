@@ -5,6 +5,7 @@ use glib::{Object, clone};
 use gtk::{gio, glib, ListItem, SignalListItemFactory, prelude::*, NoSelection, Application};
 use native_dialog::FileDialog;
 use reqwest::{Error, Response};
+use std::path::PathBuf;
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::runtime::Runtime;
 use async_channel::Receiver;
@@ -54,7 +55,7 @@ impl Window {
         // Create new model
         let model = gio::ListStore::new::<ChatObject>();
         let model_: Vec<ChatData> = vec![];
-        let current_chat: ChatObject = ChatObject::new("user".to_string(),"".to_string(), "".to_string());
+        let current_chat: ChatObject = ChatObject::new("user".to_string(),"".to_string(), PathBuf::new());
 
         // Get state and set model
         self.imp().chats.replace(Some(model));
@@ -80,7 +81,7 @@ impl Window {
             let content = buffer.text().to_string();
             window.current_chat().set_user_content(content);
             println!("user content: {}", window.current_chat().content());
-            println!("user image: {}", window.current_chat().image());
+            println!("user image: {}", window.current_chat().image().to_str().unwrap().to_string());
         }));
         
         // Setup callback for clicking (and the releasing) the icon of the entry [CAN HANDLE IMAGE UPLOADS HERE]
@@ -88,7 +89,7 @@ impl Window {
             clone!(@weak self as window => move |_,_| {
                 let file_path = window.handle_file_pick();
                 window.current_chat().set_user_image(file_path);
-                println!("user image changed to: {}", window.current_chat().image());
+                println!("user image changed to: {}", window.current_chat().image().to_str().unwrap().to_string());
             }),
         );
     }
@@ -151,17 +152,13 @@ impl Window {
         self.imp().chat_view.set_factory(Some(&factory));
     }
     
-    fn handle_file_pick(&self) -> String {
-        let result = FileDialog::new()
+    fn handle_file_pick(&self) -> PathBuf {
+        FileDialog::new()
             .add_filter("Image", &["jpg", "png", "gif", "webp"])
             .set_location("~")
             .show_open_single_file()
             .unwrap()
             .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-        result
     }
 
     fn new_chat(&self) {
@@ -220,7 +217,7 @@ impl Window {
                                     match serde_json::from_str::<APIResponse>(&body) {
                                         Ok(api_response) => {
                                             let text = &api_response.content[0].text;
-                                            let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string(), "".to_string());
+                                            let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string(), PathBuf::new());
                                             if let Ok(guard) = shared_self.lock() {
                                                 guard.chats().append(&incoming_chat);
                                             } else {
