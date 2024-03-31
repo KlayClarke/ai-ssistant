@@ -1,16 +1,7 @@
-- organize api code into dif mod [WIP]
-- Find way to only create tokio runtime once [WIP]
-- Probably make it possible to query both claude and chatgpt at same time. Then aggregate both answers into one big one using claude?
-- try writing it out word by word / char by char to simulate claude / gpt writing?]
-    chatgpt may have a streaming option that I think will work
-    attach visible bool to each word or char, then we just switch them to true in succession? if char visible, display it? Is that possible?
-- something that lets user know chat bot is thinking (while waiting for answers)
-- dark theme ?
-- Change style to look more like a chat app
-- make chat row not take up full width if text content doesn't need full width
-- when incoming chat arrives, scroll window down to accomodate it?
-- allow cmd+v paste / cmd+c copy / word select
-- Allow user to enter own api key / handle persistence
+- allow image upload
+    - build current chat_object while user drafting entry
+        - when change occurs in entry, we update current_chat object
+        - once chat sent, we clear it current_chat object in preparation for next series of chats
 
 - make chats start from bottom of page and build up [DONE]
 - Try to get Spotify api working with it --> when you enter in entry, it returns info on artist you entered [DONE]

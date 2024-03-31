@@ -13,6 +13,7 @@ use super::ChatData;
 pub struct ChatObject {
     #[property(name = "role", get, set, type = String, member = role)]
     #[property(name = "content", get, set, type = String, member = content)]
+    #[property(name = "image", get, set, type = Option<String>, member = image)]
     pub data: RefCell<ChatData>,
 }
 

@@ -30,7 +30,6 @@ impl ObjectSubclass for ChatRow {
     fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
         obj.init_template();
     }
-
 }
 
 // Trait shared by all GObjects
