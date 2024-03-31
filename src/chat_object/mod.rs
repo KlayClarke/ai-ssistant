@@ -1,6 +1,5 @@
 mod imp;
 
-use std::path::PathBuf;
 use gio::glib::object::ObjectExt;
 use glib::Object;
 use gtk::glib;

@@ -151,7 +151,7 @@ impl Window {
         self.imp().chat_view.set_factory(Some(&factory));
     }
     
-    pub fn handle_file_pick(&self) -> String {
+    fn handle_file_pick(&self) -> String {
         let result = FileDialog::new()
             .add_filter("Image", &["jpg", "png", "gif", "webp"])
             .set_location("~")
@@ -165,14 +165,15 @@ impl Window {
     }
 
     fn new_chat(&self) {
+        // if entry empty, return
+        if self.imp().entry.buffer().text().to_string().is_empty() { return }
+        
+        // clear entry
+        self.imp().entry.buffer().set_text("");
+
         // create client
         let client = APIClient::new(std::env::var("API_KEY").expect("Failed to retrieve API_KEY environment variable!"));
-        // Get content from entry and clear it
-        let buffer = self.imp().entry.buffer();
-        let content = buffer.text().to_string();
-        if content.is_empty() { return };
-        buffer.set_text("");
-
+        
         // Add new chat to model
         let chat = self.current_chat();
         self.chats().append(&chat);
