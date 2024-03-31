@@ -5,12 +5,13 @@ use glib::{Object, clone};
 use gtk::{gio, glib, ListItem, SignalListItemFactory, prelude::*, NoSelection, Application};
 use native_dialog::FileDialog;
 use reqwest::{Error, Response};
+use std::borrow::BorrowMut;
 use std::path::PathBuf;
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::runtime::Runtime;
 use async_channel::Receiver;
 
-use crate::api_types::APIResponse;
+use crate::api_types::{APIResponse, ApiRequest, Block, ImageSource, RequestContent};
 use crate::chat_object::{ChatData, ChatObject};
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
@@ -35,14 +36,6 @@ impl Window {
         Object::builder().property("application", app).build()
     }
 
-    fn chats(&self) -> gio::ListStore {
-        self.imp()
-            .chats
-            .borrow()
-            .clone()
-            .expect("Could not get current chats.")
-    }
-
     fn current_chat(&self) -> ChatObject {
         self.imp()
             .current_chat
@@ -51,10 +44,26 @@ impl Window {
             .expect("Could not get current chat")
     }
 
+    fn chats(&self) -> gio::ListStore {
+        self.imp()
+            .chats
+            .borrow()
+            .clone()
+            .expect("Could not get current chats.")
+    }
+
+    fn chats_vec(&self) -> Vec<ApiRequest> {
+        self.imp()
+            .chats_vec
+            .borrow()
+            .clone()
+            .expect("Could not get chats_vec")
+    }
+
     fn setup_chats(&self) {
         // Create new model
         let model = gio::ListStore::new::<ChatObject>();
-        let model_: Vec<ChatData> = vec![];
+        let model_: Vec<ApiRequest> = Vec::new();
         let current_chat: ChatObject = ChatObject::new("user".to_string(),"".to_string(), PathBuf::new());
 
         // Get state and set model
@@ -161,39 +170,64 @@ impl Window {
             .unwrap()
     }
 
+    fn save_to_chats_vec(&self, current_chat: ChatObject) {
+        println!("Saving to conversation: {}", current_chat.content().to_string());
+        // extract chat data from chats and save in vec
+        let role = current_chat.role().to_string();
+        let content = current_chat.content().to_string();
+        let image = current_chat.image();
+        println!("{}", role);
+        println!("{}", content);
+        println!("{:?}", image);
+        let request: ApiRequest;
+        if image.exists() {
+            // handle image content ApiRequest
+            println!("handling image exists");
+            request = ApiRequest {
+                role,
+                content: RequestContent::Blocks(vec![
+                    Block::Image {
+                        source: ImageSource {
+                            source_type: "base64".to_string(),
+                            media_type: "image/jpeg".to_string(),
+                            data: image.to_str().unwrap().to_string()
+                        }
+                    }
+                ])
+            };
+        } else {
+            // handle text content ApiRequest
+            println!("handling image doesnt exist");
+            request = ApiRequest {
+                role,
+                content: RequestContent::Text(content)
+            };
+        }
+
+        if let Some(chats_vec) = self.imp().chats_vec.borrow_mut().as_mut() {
+            chats_vec.push(request);
+        }
+
+    }
+
     fn new_chat(&self) {
+        println!("running new_chat func");
         // if entry empty, return
         if self.imp().entry.buffer().text().to_string().is_empty() { return }
         
-        // clear entry
-        self.imp().entry.buffer().set_text("");
-
         // create client
         let client = APIClient::new(std::env::var("API_KEY").expect("Failed to retrieve API_KEY environment variable!"));
         
-        // Add new chat to model
-        let chat = self.current_chat();
+        // get current chat
+        let chat = self.current_chat().clone();
+        
+        // Add new chat to model & convo
         self.chats().append(&chat);
+        self.save_to_chats_vec(chat);
 
-        // extract chat data from chats and save in vec
-        let mut result = Vec::new();
-        let n_items = self.chats().n_items();
-        for i in 0..n_items {
-            if let Some(item) = self.chats().item(i) {
-                let chat = item.downcast_ref::<ChatObject>().expect("Item is not a ChatObject");
-                let role = chat.role();
-                let content = chat.content();
-                let image = chat.image();
-
-                let chat = ChatData {
-                    role,
-                    content,
-                    image
-                };
-                result.push(chat);
-            }
-        }
-
+        // get full convo
+        let conversation = self.chats_vec();
+        
         // handle api call
         let (sender, receiver) = async_channel::bounded(1);
         let shared_self = Arc::new(Mutex::new(self.clone()));
@@ -201,7 +235,7 @@ impl Window {
         
         // for async actions in gtk
         runtime().spawn(clone!(@strong sender => async move {
-            let response = client.send_chat_message(&result).await;
+            let response = client.send_chat_message(&conversation).await;
             sender.send(response).await.expect("The channel needs to be open");
         }));
         // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]
@@ -246,5 +280,8 @@ impl Window {
                 }
             }
         });
+
+        // clear entry
+        self.imp().entry.buffer().set_text("");
     }
 }
