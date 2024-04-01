@@ -3,13 +3,19 @@ mod imp;
 use gtk::subclass::prelude::*;
 use glib::{Object, clone};
 use gtk::{gio, glib, ListItem, SignalListItemFactory, prelude::*, NoSelection, Application};
+use native_dialog::FileDialog;
 use reqwest::{Error, Response};
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::runtime::Runtime;
 use async_channel::Receiver;
+use base64::{Engine as _, engine::general_purpose};
 
-use crate::api_types::APIResponse;
-use crate::chat_object::{ChatData, ChatObject};
+
+use crate::api_types::{APIResponse, ApiRequest, Block, ImageBlock, ImageSource, RequestContent, TextBlock};
+use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
 
@@ -33,6 +39,14 @@ impl Window {
         Object::builder().property("application", app).build()
     }
 
+    fn current_chat(&self) -> ChatObject {
+        self.imp()
+            .current_chat
+            .borrow()
+            .clone()
+            .expect("Could not get current chat")
+    }
+
     fn chats(&self) -> gio::ListStore {
         self.imp()
             .chats
@@ -41,14 +55,24 @@ impl Window {
             .expect("Could not get current chats.")
     }
 
+    fn chats_vec(&self) -> Vec<ApiRequest> {
+        self.imp()
+            .chats_vec
+            .borrow()
+            .clone()
+            .expect("Could not get chats_vec")
+    }
+
     fn setup_chats(&self) {
         // Create new model
         let model = gio::ListStore::new::<ChatObject>();
-        let model_: Vec<ChatData> = vec![];
+        let model_: Vec<ApiRequest> = Vec::new();
+        let current_chat: ChatObject = ChatObject::new("user".to_string(),"".to_string(), PathBuf::new());
 
         // Get state and set model
         self.imp().chats.replace(Some(model));
         self.imp().chats_vec.replace(Some(model_));
+        self.imp().current_chat.replace(Some(current_chat));
 
         // Wrap model with selection and pass it to the list view
         let selection_model = NoSelection::new(Some(self.chats()));
@@ -61,97 +85,22 @@ impl Window {
             .entry
             .connect_activate(clone!(@weak self as window => move |_| {
                 window.new_chat();
-            }));
+        }));
 
-        // Setup callback for clicking (and the releasing) the icon of the entry
+        // setup callback for when text is entered in entry (we want to capture text and update current_chat object)
+        self.imp().entry.connect_changed(clone!(@weak self as window => move |entry| {
+            let buffer = entry.buffer();
+            let content = buffer.text().to_string();
+            window.current_chat().set_user_content(content);
+        }));
+        
+        // Setup callback for clicking (and the releasing) the icon of the entry [CAN HANDLE IMAGE UPLOADS HERE]
         self.imp().entry.connect_icon_release(
             clone!(@weak self as window => move |_,_| {
-                window.new_chat();
+                let file_path = window.handle_file_pick();
+                window.current_chat().set_user_image(file_path);
             }),
         );
-    }
-
-    fn new_chat(&self) {
-        // create client
-        let client = APIClient::new(std::env::var("API_KEY").expect("API_KEY var doesn't exist"));
-        // Get content from entry and clear it
-        let buffer = self.imp().entry.buffer();
-        let content = buffer.text().to_string();
-        if content.is_empty() { return };
-        buffer.set_text("");
-        
-        // Add new chat to model
-        let chat = ChatObject::new("user".to_string(), content.clone());
-        self.chats().append(&chat);
-
-        // extract chat data from chats and save in vec
-        let mut result = Vec::new();
-        let n_items = self.chats().n_items();
-        for i in 0..n_items {
-            if let Some(item) = self.chats().item(i) {
-                let chat = item.downcast_ref::<ChatObject>().expect("Item is not a ChatObject");
-                let role = chat.role();
-                let content = chat.content();
-                let chat = ChatData {
-                    role,
-                    content
-                };
-                result.push(chat);
-            }
-        }
-
-        // handle api call
-        let (sender, receiver) = async_channel::bounded(1);
-        let shared_self = Arc::new(Mutex::new(self.clone()));
-        let shared_receiver: Receiver<Result<Response, Error>> = receiver.clone();
-        
-        // for async actions in gtk
-        runtime().spawn(clone!(@strong sender => async move {
-            let response = client.send_chat_message(&result).await;
-            sender.send(response).await.expect("The channel needs to be open");
-        }));
-        // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]
-        glib::spawn_future_local(async move {
-            while let Ok(response) = shared_receiver.recv().await {
-                if let Ok(response) = response {
-                    println!("{:#?}", response);
-                    match response.status() {
-                        reqwest::StatusCode::OK => {
-                            match response.text().await {
-                                Ok(body) => {
-                                    println!("{:#?}", body);
-                                    match serde_json::from_str::<APIResponse>(&body) {
-                                        Ok(api_response) => {
-                                            let text = &api_response.content[0].text;
-                                            let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string());
-                                            if let Ok(guard) = shared_self.lock() {
-                                                guard.chats().append(&incoming_chat);
-                                            } else {
-                                                println!("Failed to acquire lock on shared_self");
-                                            }
-                                        }
-                                        Err(e) => {
-                                            eprintln!("Failed to deserialize response: {}", e);
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    println!("Bad request: {}", e);
-                                }
-                            }
-                        }
-                        reqwest::StatusCode::UNAUTHORIZED => {
-                            println!("Need to grab a new token");
-                        }
-                        other => {
-                            panic!("Uh oh! Something unexpected happened: {:?}", other);
-                        }
-                    }
-                } else {
-                    println!("Could not make a GET request");
-                }
-            }
-        });
     }
 
     fn setup_factory(&self) {
@@ -210,5 +159,140 @@ impl Window {
 
         // Set the factory of the list view
         self.imp().chat_view.set_factory(Some(&factory));
+    }
+    
+    fn handle_file_pick(&self) -> PathBuf {
+        FileDialog::new()
+            .add_filter("Image", &["jpg", "png", "gif", "webp"])
+            .set_location("~")
+            .show_open_single_file()
+            .unwrap()
+            .unwrap()
+    }
+
+    fn process_image(&self, image: &PathBuf) -> String {
+        let mut file = File::open(image).expect("Failed to open the image file");
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).expect("Failed to read the image file");
+        let base64_encoded = general_purpose::STANDARD.encode(buffer);
+
+        base64_encoded
+    }
+
+    fn save_to_chats_vec(&self, current_chat: &ChatObject) {
+        // extract chat data from chats and save in vec
+        let role = current_chat.role().to_string();
+        let content = current_chat.content().to_string();
+        let image = current_chat.image();
+        
+        let request: ApiRequest;
+        if image.exists() {
+            // handle image content ApiRequest
+            let base64_encoded = self.process_image(&image);
+            request = ApiRequest {
+                role,
+                content: RequestContent::Blocks(vec![
+                    Block::ImageBlock {
+                        source: ImageSource {
+                            source_type: "base64".to_string(),
+                            media_type: format!("image/{}", image.extension().unwrap().to_str().unwrap()).to_string(),
+                            data: base64_encoded
+                        }
+                    },
+                    Block::TextBlock {
+                        text: content
+                    }
+                ])
+            };
+        } else {
+            // handle text content ApiRequest
+            request = ApiRequest {
+                role,
+                content: RequestContent::Text(content)
+            };
+        }
+
+        if let Some(chats_vec) = self.imp().chats_vec.borrow_mut().as_mut() {
+            chats_vec.push(request);
+        }
+
+    }
+
+    fn new_chat(&self) {
+        // if entry empty, return
+        if self.imp().entry.buffer().text().to_string().is_empty() { return }
+        
+        // create client
+        let client = APIClient::new(std::env::var("API_KEY").expect("Failed to retrieve API_KEY environment variable!"));
+        
+        // get current chat
+        let chat = ChatObject::new(self.current_chat().role().to_string(), self.current_chat().content().to_string(), self.current_chat().image());
+        
+        // Add new chat to model & convo
+        self.chats().append(&chat);
+        self.save_to_chats_vec(&chat);
+
+        // get full convo
+        let conversation = self.chats_vec();
+        println!("{:?}", conversation);
+        // handle api call
+        let (sender, receiver) = async_channel::bounded(1);
+        let shared_self = Arc::new(Mutex::new(self.clone()));
+        let shared_receiver: Receiver<Result<Response, Error>> = receiver.clone();
+        
+        // for async actions in gtk
+        runtime().spawn(clone!(@strong sender => async move {
+            let response = client.send_chat_message(&conversation).await;
+            sender.send(response).await.expect("The channel needs to be open");
+        }));
+        // The main loop executes the asynchronous block [try to cut this down a lot / organize into other mod if possible]
+        glib::spawn_future_local(async move {
+            while let Ok(response) = shared_receiver.recv().await {
+                if let Ok(response) = response {
+                    println!("{:#?}", response);
+                    match response.status() {
+                        reqwest::StatusCode::OK => {
+                            match response.text().await {
+                                Ok(body) => {
+                                    println!("{:#?}", body);
+                                    match serde_json::from_str::<APIResponse>(&body) {
+                                        Ok(api_response) => {
+                                            let text = &api_response.content[0].text;
+                                            let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string(), PathBuf::new());
+                                            if let Ok(guard) = shared_self.lock() {
+                                                guard.chats().append(&incoming_chat);
+                                                guard.save_to_chats_vec(&incoming_chat);
+                                            } else {
+                                                println!("Failed to acquire lock on shared_self");
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Failed to deserialize response: {}", e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("Bad request: {}", e);
+                                }
+                            }
+                        }
+                        reqwest::StatusCode::UNAUTHORIZED => {
+                            println!("Need to grab a new token");
+                        }
+                        other => {
+                            panic!("Uh oh! Something unexpected happened: {:?}", other);
+                        }
+                    }
+                } else {
+                    println!("Could not make a GET request");
+                }
+            }
+        });
+
+        // clear entry
+        self.imp().entry.buffer().set_text("");
+
+        // clear current chat
+        self.imp().current_chat.replace(Some(ChatObject::new("user".to_string(),"".to_string(),PathBuf::new())));
     }
 }

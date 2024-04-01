@@ -1,6 +1,7 @@
 use reqwest::{Client, Error, Response};
 
 use crate::chat_object::ChatData;
+use crate::api_types::ApiRequest;
 
 pub struct APIClient {
     client: Client,
@@ -15,14 +16,13 @@ impl APIClient {
         }
     }
 
-    pub async fn send_chat_message(&self, conversation: &Vec<ChatData>) -> Result<Response, Error> {
-        println!("api_client line 19 conversation print: {:?}", conversation);
+    pub async fn send_chat_message(&self, conversation: &Vec<ApiRequest>) -> Result<Response, Error> {
         let api_key = self.api_key.clone();
         let url = "https://api.anthropic.com/v1/messages";
         let json_data = serde_json::json!({
             "model": "claude-3-opus-20240229",
             "max_tokens": 256,
-            "messages": conversation.clone(),
+            "messages": conversation,
         });
         let response = self.client
                 .post(url)
