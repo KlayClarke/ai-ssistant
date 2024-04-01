@@ -15,17 +15,16 @@ pub enum RequestContent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag="type")]
 pub enum Block {
-    Text { text: String },
-    Image(RequestBlock),
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RequestBlock {
-    #[serde(flatten)]
-    pub image_block: ImageBlock,
-    #[serde(flatten)]
-    pub text_block: TextBlock
+    #[serde(rename="text")]
+    TextBlock {
+        text: String
+    },
+    #[serde(rename="image")]
+    ImageBlock {
+        source: ImageSource
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

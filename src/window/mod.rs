@@ -14,7 +14,7 @@ use async_channel::Receiver;
 use base64::{Engine as _, engine::general_purpose};
 
 
-use crate::api_types::{APIResponse, ApiRequest, Block, ImageBlock, ImageSource, RequestBlock, RequestContent, TextBlock};
+use crate::api_types::{APIResponse, ApiRequest, Block, ImageBlock, ImageSource, RequestContent, TextBlock};
 use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
@@ -192,20 +192,16 @@ impl Window {
             request = ApiRequest {
                 role,
                 content: RequestContent::Blocks(vec![
-                    Block::Image(RequestBlock {
-                        image_block: ImageBlock {
-                            type_: "image".to_string(),
-                            source: ImageSource {
-                                source_type: "base64".to_string(),
-                                media_type: format!("image/{}", image.extension().unwrap().to_str().unwrap()).to_string(),
-                                data: base64_encoded
-                            }
-                        },
-                        text_block: TextBlock {
-                            type_: "text".to_string(),
-                            text: content
+                    Block::ImageBlock {
+                        source: ImageSource {
+                            source_type: "base64".to_string(),
+                            media_type: format!("image/{}", image.extension().unwrap().to_str().unwrap()).to_string(),
+                            data: base64_encoded
                         }
-                    })
+                    },
+                    Block::TextBlock {
+                        text: content
+                    }
                 ])
             };
         } else {
