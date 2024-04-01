@@ -5,14 +5,17 @@ use glib::{Object, clone};
 use gtk::{gio, glib, ListItem, SignalListItemFactory, prelude::*, NoSelection, Application};
 use native_dialog::FileDialog;
 use reqwest::{Error, Response};
-use std::borrow::BorrowMut;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{OnceLock, Arc, Mutex};
 use tokio::runtime::Runtime;
 use async_channel::Receiver;
+use base64::{Engine as _, engine::general_purpose};
 
-use crate::api_types::{APIResponse, ApiRequest, Block, ImageSource, RequestContent};
-use crate::chat_object::{ChatData, ChatObject};
+
+use crate::api_types::{APIResponse, ApiRequest, Block, ImageBlock, ImageSource, RequestBlock, RequestContent, TextBlock};
+use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;
 
@@ -89,8 +92,6 @@ impl Window {
             let buffer = entry.buffer();
             let content = buffer.text().to_string();
             window.current_chat().set_user_content(content);
-            println!("user content: {}", window.current_chat().content());
-            println!("user image: {}", window.current_chat().image().to_str().unwrap().to_string());
         }));
         
         // Setup callback for clicking (and the releasing) the icon of the entry [CAN HANDLE IMAGE UPLOADS HERE]
@@ -98,7 +99,6 @@ impl Window {
             clone!(@weak self as window => move |_,_| {
                 let file_path = window.handle_file_pick();
                 window.current_chat().set_user_image(file_path);
-                println!("user image changed to: {}", window.current_chat().image().to_str().unwrap().to_string());
             }),
         );
     }
@@ -170,34 +170,46 @@ impl Window {
             .unwrap()
     }
 
+    fn process_image(&self, image: &PathBuf) -> String {
+        let mut file = File::open(image).expect("Failed to open the image file");
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).expect("Failed to read the image file");
+        let base64_encoded = general_purpose::STANDARD.encode(buffer);
+
+        base64_encoded
+    }
+
     fn save_to_chats_vec(&self, current_chat: &ChatObject) {
-        println!("Saving to conversation: {}", current_chat.content().to_string());
         // extract chat data from chats and save in vec
         let role = current_chat.role().to_string();
         let content = current_chat.content().to_string();
         let image = current_chat.image();
-        println!("{}", role);
-        println!("{}", content);
-        println!("{:?}", image);
+        
         let request: ApiRequest;
         if image.exists() {
             // handle image content ApiRequest
-            println!("handling image exists");
+            let base64_encoded = self.process_image(&image);
             request = ApiRequest {
                 role,
                 content: RequestContent::Blocks(vec![
-                    Block::Image {
-                        source: ImageSource {
-                            source_type: "base64".to_string(),
-                            media_type: "image/jpeg".to_string(),
-                            data: image.to_str().unwrap().to_string()
+                    Block::Image(RequestBlock {
+                        image_block: ImageBlock {
+                            type_: "image".to_string(),
+                            source: ImageSource {
+                                source_type: "base64".to_string(),
+                                media_type: format!("image/{}", image.extension().unwrap().to_str().unwrap()).to_string(),
+                                data: base64_encoded
+                            }
+                        },
+                        text_block: TextBlock {
+                            type_: "text".to_string(),
+                            text: content
                         }
-                    }
+                    })
                 ])
             };
         } else {
             // handle text content ApiRequest
-            println!("handling image doesnt exist");
             request = ApiRequest {
                 role,
                 content: RequestContent::Text(content)

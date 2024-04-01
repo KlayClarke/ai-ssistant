@@ -15,10 +15,31 @@ pub enum RequestContent {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(tag = "type")]
 pub enum Block {
     Text { text: String },
-    Image { source: ImageSource },
+    Image(RequestBlock),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RequestBlock {
+    #[serde(flatten)]
+    pub image_block: ImageBlock,
+    #[serde(flatten)]
+    pub text_block: TextBlock
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TextBlock {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub text: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ImageBlock {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub source: ImageSource,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -28,6 +49,7 @@ pub struct ImageSource {
     pub media_type: String,
     pub data: String,
 }
+
 
 // Claude API response types
 #[derive(Serialize, Deserialize, Debug)]
