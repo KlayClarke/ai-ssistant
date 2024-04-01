@@ -14,7 +14,7 @@ use async_channel::Receiver;
 use base64::{Engine as _, engine::general_purpose};
 
 
-use crate::api_types::{APIResponse, ApiRequest, Block, ImageBlock, ImageSource, RequestContent, TextBlock};
+use crate::api_types::{APIResponse, ApiRequest, Block, ImageSource, RequestContent};
 use crate::chat_object::ChatObject;
 use crate::chat_row::ChatRow;
 use crate::api_client::APIClient;

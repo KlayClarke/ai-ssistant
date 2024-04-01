@@ -1,6 +1,5 @@
 use reqwest::{Client, Error, Response};
 
-use crate::chat_object::ChatData;
 use crate::api_types::ApiRequest;
 
 pub struct APIClient {

@@ -1,10 +1,7 @@
-- allow image upload
-    - build current chat_object while user drafting entry
-        - when change occurs in entry, we update current_chat object
-        - once chat sent, we clear it current_chat object in preparation for next series of chats
+- Show something to let user know that image is selected
+- allow user to remove selected image
 
-- NEED TO ADD CLAUDE RESPONSES INTO CHATS_VEC AS WELL
-
+- allow image upload [DONE]
 - make chats start from bottom of page and build up [DONE]
 - Try to get Spotify api working with it --> when you enter in entry, it returns info on artist you entered [DONE]
 - Migrate api to try to get claude working [DONE]
