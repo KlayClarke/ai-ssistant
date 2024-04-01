@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ApiRequest {
     pub role: String,
-    #[serde(flatten)]
     pub content: RequestContent,
 }
 

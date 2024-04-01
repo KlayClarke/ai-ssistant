@@ -170,7 +170,7 @@ impl Window {
             .unwrap()
     }
 
-    fn save_to_chats_vec(&self, current_chat: ChatObject) {
+    fn save_to_chats_vec(&self, current_chat: &ChatObject) {
         println!("Saving to conversation: {}", current_chat.content().to_string());
         // extract chat data from chats and save in vec
         let role = current_chat.role().to_string();
@@ -211,7 +211,6 @@ impl Window {
     }
 
     fn new_chat(&self) {
-        println!("running new_chat func");
         // if entry empty, return
         if self.imp().entry.buffer().text().to_string().is_empty() { return }
         
@@ -219,15 +218,15 @@ impl Window {
         let client = APIClient::new(std::env::var("API_KEY").expect("Failed to retrieve API_KEY environment variable!"));
         
         // get current chat
-        let chat = self.current_chat().clone();
+        let chat = ChatObject::new(self.current_chat().role().to_string(), self.current_chat().content().to_string(), self.current_chat().image());
         
         // Add new chat to model & convo
         self.chats().append(&chat);
-        self.save_to_chats_vec(chat);
+        self.save_to_chats_vec(&chat);
 
         // get full convo
         let conversation = self.chats_vec();
-        
+        println!("{:?}", conversation);
         // handle api call
         let (sender, receiver) = async_channel::bounded(1);
         let shared_self = Arc::new(Mutex::new(self.clone()));
@@ -254,6 +253,7 @@ impl Window {
                                             let incoming_chat = ChatObject::new("assistant".to_string(), text.to_string(), PathBuf::new());
                                             if let Ok(guard) = shared_self.lock() {
                                                 guard.chats().append(&incoming_chat);
+                                                guard.save_to_chats_vec(&incoming_chat);
                                             } else {
                                                 println!("Failed to acquire lock on shared_self");
                                             }
@@ -283,5 +283,8 @@ impl Window {
 
         // clear entry
         self.imp().entry.buffer().set_text("");
+
+        // clear current chat
+        self.imp().current_chat.replace(Some(ChatObject::new("user".to_string(),"".to_string(),PathBuf::new())));
     }
 }
